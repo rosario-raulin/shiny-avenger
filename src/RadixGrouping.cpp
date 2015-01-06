@@ -4,6 +4,7 @@
 #include "ThreadPool.hpp"
 
 void call() {
+	std::cout << "fnord" << std::endl;
 }
 
 PositionListPtr
@@ -26,7 +27,8 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr> columns) const {
 		size_t lower = 0;
 		size_t upper = 0;
 		
-		//pool.addTask(&call);
+		boost::shared_future<void> result(pool.addTask(&call));
+		result.wait();
 	}
 	
 	return NULL;
