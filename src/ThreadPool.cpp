@@ -21,8 +21,3 @@ ThreadPool::~ThreadPool() {
 	}
 	delete[] _threads;
 }
-
-boost::shared_future<void>
-ThreadPool::addTask(boost::function<void> function) {
-	
-}

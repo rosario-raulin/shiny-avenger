@@ -3,6 +3,9 @@
 #include "Matrix.hpp"
 #include "ThreadPool.hpp"
 
+void call() {
+}
+
 PositionListPtr
 RadixGrouping::groupBy(const std::vector<ColumnPtr> columns) const {
 	if (columns.empty()) {
@@ -23,7 +26,7 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr> columns) const {
 		size_t lower = 0;
 		size_t upper = 0;
 		
-		pool.addTask();
+		//pool.addTask(&call);
 	}
 	
 	return NULL;

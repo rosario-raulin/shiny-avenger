@@ -4,15 +4,17 @@
 #include <cstddef>
 #include <vector>
 
-#include <boost/thread/thread.hpp>
+#include <boost/thread.hpp>
 
 class ThreadPool {
 public:
 	ThreadPool(size_t size);
 	~ThreadPool();
 	
-	boost::shared_future<void>
-	ThreadPool::addTask(boost::function<void> function);
+	// template<class Function>
+	// boost::shared_future<void>
+	// addTask(Function fn) {
+	// }
 	
 private:
 	size_t _size;
