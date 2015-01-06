@@ -5,12 +5,28 @@
 
 #include <algorithm>
 
+struct histjob {
+	histjob(size_t lower, size_t upper, Matrix& histogram) :
+		lower(lower),
+		upper(upper),
+		histogram(histogram) {
+	}
+	
+	void operator()() {
+		
+	}
+	
+	size_t lower;
+	size_t upper;
+	Matrix& histogram;
+};
+
 PositionListPtr
-RadixGrouping::groupBy(const std::vector<ColumnPtr> columns) const {
+RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) const {
 	if (columns.empty()) {
 		return PositionListPtr();
 	}
-		
+	
 	// TODO: extend to multiple columns
 	ColumnPtr column = columns[0];
 	size_t column_size = column->size();
@@ -28,7 +44,7 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr> columns) const {
 		size_t lower = chunk_size * i;
 		size_t upper = std::min(lower + chunk_size, column_size);
 		
-		// pool.addTask();
+		pool.addTask(histjob(lower, upper, histogram));
 	}
 	
 	return NULL;

@@ -9,7 +9,7 @@
  */
 class GroupingAlgorithm {
 public:
-	virtual PositionListPtr groupBy(const std::vector<ColumnPtr> columns) const = 0;
+	virtual PositionListPtr groupBy(const std::vector<ColumnPtr>& columns) const = 0;
 };
 
 #endif

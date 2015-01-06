@@ -8,7 +8,7 @@
 
 class RadixGrouping : public GroupingAlgorithm {
 public:
-	virtual PositionListPtr groupBy(const std::vector<ColumnPtr> columns) const;
+	virtual PositionListPtr groupBy(const std::vector<ColumnPtr>& columns) const;
 };
 
 #endif
