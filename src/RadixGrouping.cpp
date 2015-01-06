@@ -3,9 +3,7 @@
 #include "Matrix.hpp"
 #include "ThreadPool.hpp"
 
-void call() {
-	std::cout << "fnord" << std::endl;
-}
+#include <algorithm>
 
 PositionListPtr
 RadixGrouping::groupBy(const std::vector<ColumnPtr> columns) const {
@@ -23,12 +21,14 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr> columns) const {
 	Matrix histogram(NUMBER_OF_TASKS, hist_size);
 	
 	// Step 1: add histogram tasks
+	
+	// Ceiling divison of column_size / NUMBER_OF_TASKS
+	size_t chunk_size = 1 + ((column_size - 1) / NUMBER_OF_TASKS);
 	for (size_t i = 0; i < NUMBER_OF_TASKS; ++i) {
-		size_t lower = 0;
-		size_t upper = 0;
+		size_t lower = chunk_size * i;
+		size_t upper = std::min(lower + chunk_size, column_size);
 		
-		boost::shared_future<void> result(pool.addTask(&call));
-		result.wait();
+		// pool.addTask();
 	}
 	
 	return NULL;
