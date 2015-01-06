@@ -1,7 +1,5 @@
 #include "ThreadPool.hpp"
 
-#include <iostream>
-
 void
 ThreadPool::worker() {
 	while (true) {
@@ -38,10 +36,12 @@ ThreadPool::~ThreadPool() {
 		_stop = true;
 	}
 	_cv.notify_all();
+	
 	for (size_t i = 0; i < _size; ++i) {
 		_threads[i]->join();
 		delete _threads[i];
 	}
+	
 	delete[] _threads;
 }
 
