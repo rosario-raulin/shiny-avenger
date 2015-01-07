@@ -1,44 +1,49 @@
 #ifndef HAVE_THREAD_POOL_HPP
 #define HAVE_THREAD_POOL_HPP
 
-#include <cstddef>
+#include <vector>
 #include <queue>
 
+#include <boost/make_shared.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 
-typedef boost::packaged_task<void> TaskType;
+template<class ResultType>
+void wrapper(boost::shared_ptr<boost::packaged_task<ResultType> > task) {
+	(*task)();
+}
 
 class ThreadPool {
 public:
 	ThreadPool(size_t size);
 	~ThreadPool();
 	
-	template<class Function>
-	boost::shared_future<void>
-	addTask(Function fn) {
-		TaskType* task = new TaskType(fn);
-		boost::shared_future<void> future(task->get_future());
+	template<class ResultType, class FunctionType>
+	boost::shared_future<ResultType>
+	addJob(FunctionType fn) {
+		boost::shared_ptr<boost::packaged_task<ResultType> > task
+			= boost::make_shared<boost::packaged_task<ResultType> >(fn);
 		
 		{
-			boost::unique_lock<boost::mutex> lock(_mutex);
-			_tasks.push(task);
+			boost::lock_guard<boost::mutex> lock(_mutex);
+			_jobs.push(boost::bind(&wrapper<ResultType>, task));
 		}
-		
+	
 		_cv.notify_one();
-		return future;
+		
+		return boost::shared_future<ResultType>(task->get_future());
 	}
 	
 private:
 	size_t _size;
-	boost::thread** _threads;
-	std::queue<TaskType*> _tasks;
+	std::vector<boost::thread*> _threads;
 	bool _stop;
-	boost::condition_variable _cv;
 	boost::mutex _mutex;
+	boost::condition_variable _cv;
+	std::queue<boost::function<void(void)> > _jobs;
 	
-	
-	bool check_cond() const;
 	void worker();
+	bool check_wait_cond() const;
 };
 
 #endif
