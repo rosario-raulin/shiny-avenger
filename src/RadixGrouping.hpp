@@ -3,8 +3,8 @@
 
 #include "GroupingAlgorithm.hpp"
 
-#define NUMBER_OF_TASKS 16
-#define NUMBER_OF_RELEVANT_BITS 11
+#define NUMBER_OF_TASKS 8
+#define NUMBER_OF_RELEVANT_BITS 4
 
 class RadixGrouping : public GroupingAlgorithm {
 public:
