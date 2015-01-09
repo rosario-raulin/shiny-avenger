@@ -3,8 +3,9 @@
 
 #include "CommonTypes.hpp"
 
-class GroupingAlgorithm {
+class IGroupingAlgorithm {
 public:
+	virtual ~IGroupingAlgorithm() {}
 	virtual PositionListPtr groupBy(const std::vector<ColumnPtr>& columns) = 0;
 };
 
