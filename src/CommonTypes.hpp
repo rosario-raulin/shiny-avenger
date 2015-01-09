@@ -3,11 +3,9 @@
 
 #include <vector>
 
-typedef std::vector<int> PositionList;
-typedef PositionList* PositionListPtr;
-typedef std::vector<int> Column;
-typedef Column* ColumnPtr;
-
-#define NUMBER_OF_THREADS 4
+using PositionList = std::size_t;
+using PositionListPtr = std::shared_ptr<PositionList>;
+using Column = std::vector<std::size_t>;
+using ColumnPtr = Column*;
 
 #endif

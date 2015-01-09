@@ -3,12 +3,12 @@
 
 #include "GroupingAlgorithm.hpp"
 
-#define NUMBER_OF_TASKS 8
-#define NUMBER_OF_RELEVANT_BITS 4
+#define NUMBER_OF_TASKS 16
+#define NUMBER_OF_RELEVANT_BITS 11
 
 class RadixGrouping : public GroupingAlgorithm {
 public:
-	virtual PositionListPtr groupBy(const std::vector<ColumnPtr>& columns) const;
+	PositionListPtr groupBy(const std::vector<ColumnPtr>& columns);
 };
 
 #endif

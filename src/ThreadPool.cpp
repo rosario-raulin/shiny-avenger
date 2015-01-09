@@ -1,46 +1,34 @@
 #include "ThreadPool.hpp"
 
-ThreadPool::ThreadPool(size_t size) : _stop(false){
-	_threads.resize(size);
-	for (size_t i = 0; i < size; ++i) {
-		_threads[i] = new boost::thread(boost::bind(&ThreadPool::worker, this));
+#include <algorithm>
+
+ThreadPool::ThreadPool(std::size_t size) : _stop(false) {
+	auto worker = [this]() {
+		while (true) {
+			Job job;
+			{
+				std::unique_lock<std::mutex> lock(this->_mutex);
+				_cv.wait(lock, [this]() { return this->_stop || !_jobs.empty(); });
+				if (this->_stop && this->_jobs.empty()) {
+					return;
+				}
+				job = std::move(this->_jobs.front());
+				this->_jobs.pop();
+			}
+			job();
+		}
+	};
+	
+	for (std::size_t i = 0; i < size; ++i) {
+		_threads.emplace_back(std::thread(worker));
 	}
 }
 
 ThreadPool::~ThreadPool() {
 	{
-		boost::unique_lock<boost::mutex> lock(_mutex);
+		std::unique_lock<std::mutex> lock(_mutex);
 		_stop = true;
 	}
 	_cv.notify_all();
-	
-	for (size_t i = 0; i < _threads.size(); ++i) {
-		_threads[i]->join();
-		delete _threads[i];
-	}
-}
-
-void
-ThreadPool::worker() {
-	while (true) {
-		boost::function<void(void)> task;
-		
-		{
-			boost::unique_lock<boost::mutex> lock(_mutex);
-			_cv.wait(lock, boost::bind(&ThreadPool::check_wait_cond, this));
-			if (_stop && _jobs.empty()) {
-				return;
-			}
-			
-			task = _jobs.front();
-			_jobs.pop();
-		}
-		
-		task();
-	}
-}
-
-bool
-ThreadPool::check_wait_cond() const {
-	return _stop || !_jobs.empty();
+	std::for_each(_threads.begin(), _threads.end(), [](std::thread& ptr) { ptr.join(); });
 }
