@@ -7,7 +7,12 @@
 #include <algorithm>
 #include <unordered_map>
 
+#include <array>
+#include <iostream>
+
 using Histogram = Matrix<std::size_t>;
+
+std::array<std::size_t, CARDINALITY> VALUES;
 
 static inline std::size_t
 hash(std::size_t value) {
@@ -72,7 +77,7 @@ void startAndEndJobs(Function fn, ThreadPool& pool, Column& column, Histogram& h
 		std::size_t lower = chunk_size * i;
 		std::size_t upper = lower + chunk_size;
 		
-		auto job = [=, &pool, &column, &histogram]() { fn(i, column, histogram, lower, upper, args...); };
+		auto job = [&, i, lower, upper]() { fn(i, column, histogram, lower, upper, args...); };
 		results.emplace_back(pool.addJob(job));
 	}
 	
@@ -80,8 +85,9 @@ void startAndEndJobs(Function fn, ThreadPool& pool, Column& column, Histogram& h
 	std::size_t upper;
 	for (auto i = 0; i < diff_cases; ++i) {
 		upper = lower + chunk_size + 1;
-		
-		auto job = [=, &pool, &column, &histogram]() { fn(i + regular_cases, column, histogram, lower, upper, args...); };
+		auto job = [&, i, regular_cases, lower, upper]() {
+			fn(i + regular_cases, column, histogram, lower, upper, std::forward<Args>(args)...);
+		};
 		results.emplace_back(pool.addJob(job));
 		
 		lower = upper;
@@ -99,18 +105,15 @@ void localGrouping(std::shared_ptr<std::size_t> reordered, std::shared_ptr<std::
 		groups[values[i]].emplace_back(indexMap[i]);
 	}
 	
-	std::size_t i = 0;
-	for (const auto& pair : groups) {
-		for (const auto& x : pair.second) {
-			indexMap[i] = x;
-			++i;
-		}
+	for (const auto& p : groups) {
+		VALUES[p.first] = p.second.size();
 	}
 }
 
 PositionListPtr
 RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	auto table_size = (1 << NUMBER_OF_RELEVANT_BITS);
+	std::cout << "table size is " << table_size << std::endl;
 	Column& column = *(columns[0]);
 	Histogram histogram(NUMBER_OF_TASKS, table_size);
 	ThreadPool pool(NUMBER_OF_THREADS);
@@ -125,6 +128,9 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	// Step 2: calculate start/end indicies
 	std::shared_ptr<std::size_t> destOutput(new std::size_t[table_size], array_deleter);
 	startAndEndJobs(indexJob, pool, column, histogram, reordered, indices, destOutput);
+	
+	auto printer = [](const std::size_t& v) { std::cout << v << std::endl; };
+	std::for_each(reordered.get(), reordered.get() + column.size(), printer);
 	
 	// Step 3: for each partition, create local grouping jobs
 	using ResultType = std::shared_future<void>;
