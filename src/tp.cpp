@@ -1,12 +1,12 @@
 #include "RadixGrouping.hpp"
+#include "HashBasedGrouping.hpp"
 
 #include <vector>
 #include <iostream>
 #include <memory>
 #include <random>
-
-#define TESTSIZE 100
-#define CARDINALITY 10
+#include <chrono>
+#include <functional>
 
 std::shared_ptr<Column> make_column(std::size_t size, std::size_t cardinality) {
 	auto columnPtr = std::make_shared<Column>();
@@ -30,16 +30,32 @@ void print_column(std::shared_ptr<Column> columnPtr) {
 	}
 }
 
+template<class TimeType = std::chrono::milliseconds, class Functor, class ...Args>
+typename TimeType::rep measureTime(Functor function, Args&&... args) {
+	auto start = std::chrono::system_clock::now();
+	function(std::forward<Args>(args)...);
+	auto duration = std::chrono::duration_cast<TimeType>(std::chrono::system_clock::now() - start);
+	return duration.count();
+}
+
 int main() {
-	RadixGrouping algo;
+	auto algo = std::make_shared<RadixGrouping>();
 	auto column = make_column(TESTSIZE, CARDINALITY);
-	print_column(column);
+	// print_column(column);
 	std::vector<ColumnPtr> columns;
 	columns.emplace_back(column.get());
-	auto ptr = algo.groupBy(columns);
 	
-	auto printer = [](const std::size_t& x) { std::cout << x << std::endl; };
-	std::for_each(ptr.get(), ptr.get() + column->size(), printer);
+	auto fn = [algo](const std::vector<ColumnPtr>& columns) { algo->groupBy(columns); };
+	auto duration = measureTime(fn, columns);
+	std::cout << "Grouping took " << duration / 1000.0 << " seconds." << std::endl;
+	//auto ptr = algo.groupBy(columns);
+	
+	for (auto i = 0; i < CARDINALITY; ++i) {
+		std::cout << i << " maps to " << VALUES[i] << " values." << std::endl;
+	}
+	
+	// auto printer = [](const std::size_t& x) { std::cout << x << std::endl; };
+	// std::for_each(ptr.get(), ptr.get() + column->size(), printer);
 		
 	return 0;
 }
