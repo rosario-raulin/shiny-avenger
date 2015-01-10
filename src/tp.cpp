@@ -31,14 +31,6 @@ void print_column(std::shared_ptr<Column> columnPtr) {
 	}
 }
 
-template<class TimeType = std::chrono::milliseconds, class Functor, class ...Args>
-typename TimeType::rep measureTime(Functor function, Args&&... args) {
-	auto start = std::chrono::system_clock::now();
-	function(std::forward<Args>(args)...);
-	auto duration = std::chrono::duration_cast<TimeType>(std::chrono::system_clock::now() - start);
-	return duration.count();
-}
-
 std::shared_ptr<IGroupingAlgorithm>
 make_grouping_algorithm(const std::string& algorithm) {
 	if (algorithm == "radix") {
@@ -62,14 +54,26 @@ int main(int argc, char** argv) {
 
 		std::vector<ColumnPtr> columns;
 		columns.emplace_back(column.get());
+
+		auto start = std::chrono::system_clock::now();
+		auto res = algo->groupBy(columns);
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);
 		
-		auto fn = [algo](const std::vector<ColumnPtr>& columns) { algo->groupBy(columns); };
-		auto duration = measureTime(fn, columns);
-		std::cout << "Grouping took " << duration / 1000.0 << " seconds." << std::endl;
+		std::cout << "Grouping took " << (duration.count() / 1000.0) << " seconds." << std::endl;
 		
-		for (auto i = 0; i < CARDINALITY; ++i) {
-			std::cout << i << " maps to " << VALUES[i] << " values." << std::endl;
+		auto groups = 0;
+		auto ptr = res.get();
+		for (std::size_t i = 0; i < column->size()-1; ++i) {
+			auto v1 = (*column)[ptr[i]];
+			auto v2 = (*column)[ptr[i+1]];
+			
+			if (v1 != v2) {
+				//std::cout << v1 << " and " << v2 << " differ." << std::endl;
+				++groups;
+			}
 		}
+		
+		std::cout << "Found " << groups << " groups." << std::endl;
 		
 		return 0;
 	} else {
