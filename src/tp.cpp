@@ -43,14 +43,17 @@ make_grouping_algorithm(const std::string& algorithm) {
 }
 
 int main(int argc, char** argv) {
-	if (argc > 1) {
+	if (argc > 3) {
 		auto algo = make_grouping_algorithm(argv[1]);
 		if (algo == nullptr) {
 			std::cerr << "error: unknown grouping algorithm!" << std::endl;
 			return 1;
 		}
 		
-		auto column = make_column(TESTSIZE, CARDINALITY);
+		auto testsize = std::stoi(argv[2]);
+		auto cardinality = std::stoi(argv[3]);
+		
+		auto column = make_column(testsize, cardinality);
 
 		std::vector<ColumnPtr> columns;
 		columns.emplace_back(column.get());
@@ -61,7 +64,7 @@ int main(int argc, char** argv) {
 		
 		std::cout << "Grouping took " << (duration.count() / 1000.0) << " seconds." << std::endl;
 		
-		auto groups = 0;
+		auto groups = 1; // there is at least one group
 		auto ptr = res.get();
 		for (std::size_t i = 0; i < column->size()-1; ++i) {
 			auto v1 = (*column)[ptr[i]];
