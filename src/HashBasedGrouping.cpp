@@ -1,5 +1,4 @@
 #include "HashBasedGrouping.hpp"
-#include "RadixGrouping.hpp"
 
 #include <unordered_map>
 #include <vector>
@@ -21,9 +20,8 @@ HashBasedGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	
 	std::size_t j = 0;
 	for (const auto& pos : positionMap) {
-		VALUES[pos.first] = pos.second.size();
 		for (const auto& index : pos.second) {
-			(columnPtr.get())[j++] = column[index];
+			(columnPtr.get())[j++] = index;
 		}
 	}
 	
