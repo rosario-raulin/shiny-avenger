@@ -33,12 +33,12 @@ print_column(std::shared_ptr<Column> columnPtr) {
 	}
 }
 
-static std::shared_ptr<IGroupingAlgorithm>
+static std::unique_ptr<IGroupingAlgorithm>
 make_grouping_algorithm(const std::string& algorithm) {
 	if (algorithm == "radix") {
-		return std::make_shared<RadixGrouping>();
+		return std::unique_ptr<RadixGrouping>(new RadixGrouping());
 	} else if (algorithm == "simple") {
-		return std::make_shared<HashBasedGrouping>();
+		return std::unique_ptr<HashBasedGrouping>(new HashBasedGrouping());
 	} else {
 		return nullptr;
 	}
@@ -50,7 +50,7 @@ printUsage() {
 }
 
 static void
-testGroupingAlgorithm(std::shared_ptr<IGroupingAlgorithm> algo, std::size_t testsize, std::size_t cardinality) {
+testGroupingAlgorithm(std::unique_ptr<IGroupingAlgorithm> algo, std::size_t testsize, std::size_t cardinality) {
 	auto column = make_column(testsize, cardinality);
 	
 	std::vector<ColumnPtr> columns;
@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
 		try {
 			auto testsize = std::stoi(argv[2]);
 			auto cardinality = std::stoi(argv[3]);
-			testGroupingAlgorithm(algo, testsize, cardinality);
+			testGroupingAlgorithm(std::move(algo), testsize, cardinality);
 			return 0;
 		} catch (const std::invalid_argument& e) {
 			std::cerr << "error: invalid arguments, see usage" << std::endl;
