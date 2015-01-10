@@ -129,8 +129,8 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	std::shared_ptr<std::size_t> destOutput(new std::size_t[table_size], array_deleter);
 	startAndEndJobs(indexJob, pool, column, histogram, reordered, indices, destOutput);
 	
-	auto printer = [](const std::size_t& v) { std::cout << v << std::endl; };
-	std::for_each(reordered.get(), reordered.get() + column.size(), printer);
+	// auto printer = [](const std::size_t& v) { std::cout << v << std::endl; };
+	// std::for_each(reordered.get(), reordered.get() + column.size(), printer);
 	
 	// Step 3: for each partition, create local grouping jobs
 	using ResultType = std::shared_future<void>;

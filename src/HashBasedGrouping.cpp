@@ -5,8 +5,6 @@
 #include <vector>
 #include <memory>
 
-#include <iostream>
-
 PositionListPtr
 HashBasedGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	if (columns.empty()) return PositionListPtr();
