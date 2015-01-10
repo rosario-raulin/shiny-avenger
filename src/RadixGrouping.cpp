@@ -7,12 +7,7 @@
 #include <algorithm>
 #include <unordered_map>
 
-#include <array>
-#include <iostream>
-
 using Histogram = Matrix<std::size_t>;
-
-std::array<std::size_t, CARDINALITY> VALUES;
 
 static inline std::size_t
 hash(std::size_t value) {
@@ -52,9 +47,9 @@ indexJob(std::size_t id, Column& column, Histogram& histogram, std::size_t lower
 static void
 histJob(std::size_t id, Column& column, Histogram& histogram, std::size_t lower, std::size_t upper) {
 	for (auto i = lower; i < upper; ++i) {
-			auto index = hash(column[i]);
-			++histogram.get(id, index);
-		}
+		auto index = hash(column[i]);
+		++histogram.get(id, index);
+	}
 		
 	auto table_size = (1 << NUMBER_OF_RELEVANT_BITS);
 	auto prefix_sum = 0;
@@ -105,15 +100,18 @@ void localGrouping(std::shared_ptr<std::size_t> reordered, std::shared_ptr<std::
 		groups[values[i]].emplace_back(indexMap[i]);
 	}
 	
-	for (const auto& p : groups) {
-		VALUES[p.first] = p.second.size();
+	auto i = lower;
+	for (const auto& pair : groups) {
+		for (const auto& index : pair.second) {
+			indexMap[i++] = index;
+		}
 	}
 }
 
 PositionListPtr
 RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	auto table_size = (1 << NUMBER_OF_RELEVANT_BITS);
-	std::cout << "table size is " << table_size << std::endl;
+
 	Column& column = *(columns[0]);
 	Histogram histogram(NUMBER_OF_TASKS, table_size);
 	ThreadPool pool(NUMBER_OF_THREADS);
@@ -129,9 +127,6 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	std::shared_ptr<std::size_t> destOutput(new std::size_t[table_size], array_deleter);
 	startAndEndJobs(indexJob, pool, column, histogram, reordered, indices, destOutput);
 	
-	// auto printer = [](const std::size_t& v) { std::cout << v << std::endl; };
-	// std::for_each(reordered.get(), reordered.get() + column.size(), printer);
-	
 	// Step 3: for each partition, create local grouping jobs
 	using ResultType = std::shared_future<void>;
 	std::vector<ResultType> results;
@@ -144,6 +139,11 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 		auto job = [reordered, indices, lower, upper]() { localGrouping(reordered, indices, lower, upper); };
 		results.emplace_back(pool.addJob(job));
 	}
+	
+	auto last_part_start = offsets[table_size-1];
+	auto last_part_end = column.size();
+	auto job = [reordered, indices, last_part_start, last_part_end]() { localGrouping(reordered, indices, last_part_start, last_part_end); };
+	results.emplace_back(pool.addJob(job));
 	
 	std::for_each(results.begin(), results.end(), [](ResultType& r) { r.wait(); });
 	

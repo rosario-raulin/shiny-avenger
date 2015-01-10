@@ -9,7 +9,7 @@ using PositionListPtr = std::shared_ptr<PositionList>;
 using Column = std::vector<std::size_t>;
 using ColumnPtr = Column*;
 
-#define TESTSIZE 10000
+#define TESTSIZE 100
 #define CARDINALITY 10000
 
 #endif
