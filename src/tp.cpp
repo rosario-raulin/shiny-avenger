@@ -1,5 +1,6 @@
 #include "RadixGrouping.hpp"
 #include "HashBasedGrouping.hpp"
+#include "SharedHashGrouping.hpp"
 
 #include <vector>
 #include <iostream>
@@ -39,6 +40,8 @@ make_grouping_algorithm(const std::string& algorithm) {
 		return std::unique_ptr<RadixGrouping>(new RadixGrouping());
 	} else if (algorithm == "simple") {
 		return std::unique_ptr<HashBasedGrouping>(new HashBasedGrouping());
+	} else if (algorithm == "shared") {
+		return std::unique_ptr<SharedHashGrouping>(new SharedHashGrouping());
 	} else {
 		return nullptr;
 	}

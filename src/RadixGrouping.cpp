@@ -123,6 +123,7 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	std::default_delete<std::size_t[]> array_deleter;
 	std::shared_ptr<std::size_t> reordered(new std::size_t[column.size()], array_deleter);
 	std::shared_ptr<std::size_t> indices(new std::size_t[column.size()], array_deleter); 
+	
 	// Step 2: calculate start/end indicies
 	std::shared_ptr<std::size_t> destOutput(new std::size_t[table_size], array_deleter);
 	startAndEndJobs(indexJob, pool, column, histogram, reordered, indices, destOutput);
