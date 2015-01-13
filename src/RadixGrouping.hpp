@@ -4,7 +4,6 @@
 #include "GroupingAlgorithm.hpp"
 
 #define NUMBER_OF_TASKS 16
-#define NUMBER_OF_RELEVANT_BITS 11
 
 class RadixGrouping : public IGroupingAlgorithm {
 public:

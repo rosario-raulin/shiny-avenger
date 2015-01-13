@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <unordered_map>
 
+#define NUMBER_OF_RELEVANT_BITS 11
+
 using Histogram = Matrix<std::size_t>;
 
 static inline std::size_t
