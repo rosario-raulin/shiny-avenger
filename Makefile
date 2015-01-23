@@ -15,4 +15,4 @@ link:
 	$(LD) -o tp *.o
 
 clean:
-	rm -rf *.o
+	rm -rf tp *.o
