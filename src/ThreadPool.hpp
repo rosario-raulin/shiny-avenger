@@ -10,15 +10,13 @@
 #include <condition_variable>
 #include <future>
 
-#define NUMBER_OF_THREADS 4
-
 using Job = std::function<void()>;
 
 class ThreadPool {
 public:
 	ThreadPool(std::size_t size);
 	~ThreadPool();
-	
+
 	template<class Function>
 	auto
 	addJob(Function&& fn) -> std::shared_future<typename std::result_of<Function()>::type >
@@ -32,11 +30,11 @@ public:
 		_cv.notify_one();
 		return task->get_future().share();
 	}
-	
+
 private:
 	ThreadPool(const ThreadPool& other) = delete;
 	ThreadPool& operator=(const ThreadPool&) = delete;
-	
+
 	std::vector<std::thread> _threads;
 	std::mutex _mutex;
 	std::condition_variable _cv;

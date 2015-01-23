@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
+#include <iostream>
 
 using Histogram = Matrix<std::size_t>;
 
@@ -17,7 +18,7 @@ indexJob(std::size_t id,
 	std::size_t lower,
 	std::size_t upper,
 	std::shared_ptr<std::size_t> reordered,
-	std::shared_ptr<std::size_t> indices,
+    std::size_t* indices,
 	std::shared_ptr<std::size_t> destOutput)
 {
 	auto table_size = (1 << rgrouping.number_of_bits());
@@ -42,7 +43,7 @@ indexJob(std::size_t id,
 
 	for (auto i = lower; i < upper; ++i) {
 		auto index = rgrouping.hash(column[i]);
-		(indices.get())[dest[index]] = i;
+		indices[dest[index]] = i;
 		(reordered.get())[dest[index]] = column[i];
 		++dest[index];
 	}
@@ -88,7 +89,7 @@ void startAndEndJobs(Function fn,
 		std::size_t lower = chunk_size * i;
 		std::size_t upper = lower + chunk_size;
 
-		auto job = [&, i, lower, upper]() { fn(i, column, histogram, rgrouping, lower, upper, args...); };
+        auto job = [&, i, lower, upper]() { fn(i, column, histogram, rgrouping, lower, upper, std::forward<Args>(args)...); };
 		results.emplace_back(pool.addJob(job));
 	}
 
@@ -108,13 +109,13 @@ void startAndEndJobs(Function fn,
 }
 
 void localGrouping(std::shared_ptr<std::size_t> reordered,
-	std::shared_ptr<std::size_t> indices,
+	std::size_t* indices,
 	std::size_t lower,
 	std::size_t upper)
 {
 	std::unordered_map<std::size_t, std::vector<std::size_t> > groups;
 	std::size_t* values = reordered.get();
-	std::size_t* indexMap = indices.get();
+    std::size_t* indexMap = indices;
 
 	for (auto i = lower; i < upper; ++i) {
 		groups[values[i]].emplace_back(indexMap[i]);
@@ -151,7 +152,7 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	// little workaround: C++11 doesn't have shared_ptr arrays, so we need a custom deallocator
 	std::default_delete<std::size_t[]> array_deleter;
 	std::shared_ptr<std::size_t> reordered(new std::size_t[column.size()], array_deleter);
-	std::shared_ptr<std::size_t> indices(new std::size_t[column.size()], array_deleter);
+    size_t* indices = new std::size_t[column.size()]();
 
 	// Step 2: calculate start/end indicies
 	std::shared_ptr<std::size_t> destOutput(new std::size_t[table_size], array_deleter);
@@ -176,6 +177,6 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	results.emplace_back(pool.addJob(job));
 
 	std::for_each(results.begin(), results.end(), [](ResultType& r) { r.wait(); });
-
-	return indices;
+    
+    return std::shared_ptr<size_t>(indices, std::default_delete<std::size_t[]>());
 }
