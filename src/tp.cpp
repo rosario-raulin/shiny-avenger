@@ -1,6 +1,7 @@
 #include "RadixGrouping.hpp"
 #include "HashBasedGrouping.hpp"
 #include "IndependentHashGrouping.hpp"
+#include "SharedHashGrouping.hpp"
 
 #include <random>
 #include <memory>
@@ -14,7 +15,6 @@
 #define RANDOM_GENERATOR_TYPE std::mt19937_64
 
 static const size_t NUMBER_OF_PASSES = 20;
-
 static RANDOM_GENERATOR_TYPE RANDOM_GENERATOR;
 
 static size_t number_of_tuples(size_t size_in_mb) {
@@ -148,10 +148,18 @@ int main() {
   std::array<size_t, 3> cardinalities = { 10, 1000, 1000000 };
   std::array<size_t, 8> test_sizes = { 1, 8, 16, 32, 64, 128, 256, 512 };
 
-  std::array<algorithm, 2> algorithms =
+  std::array<algorithm, 8> algorithms =
   {
-    algorithm("radix", new RadixGrouping(4, 16, 11)),
-    algorithm("simple", new HashBasedGrouping())
+    algorithm("radix 1", new RadixGrouping(4, 16, 11)),
+    algorithm("radix 2", new RadixGrouping(8, 8, 11)),
+    algorithm("radix 3", new RadixGrouping(8, 16, 11)),
+
+    algorithm("radix 4", new RadixGrouping(8, 32, 11)),
+    algorithm("radix 5", new RadixGrouping(8, 32, 7)),
+    algorithm("radix 6", new RadixGrouping(8, 32, 14)),
+
+    algorithm("simple", new HashBasedGrouping()),
+    algorithm("independent", new SharedHashGrouping())
   };
 
   std::array<std::string, 2> dists = { "uniform", "geometric" };

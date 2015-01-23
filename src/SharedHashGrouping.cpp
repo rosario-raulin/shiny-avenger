@@ -7,7 +7,7 @@
 #include <cmath>  // ceil
 #include <memory>
 
-#define NUMBER_OF_THREADS 4
+#define NUMBER_OF_THREADS 8
 #define NUMBER_OF_RELEVANT_BITS 4
 
 struct mysort {
