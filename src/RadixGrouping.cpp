@@ -18,7 +18,7 @@ indexJob(std::size_t id,
 	std::size_t lower,
 	std::size_t upper,
 	std::shared_ptr<std::size_t> reordered,
-    std::size_t* indices,
+  std::size_t* indices,
 	std::shared_ptr<std::size_t> destOutput)
 {
 	auto table_size = (1 << rgrouping.number_of_bits());
@@ -55,7 +55,10 @@ histJob(std::size_t id,
 	Histogram& histogram,
 	RadixGrouping& rgrouping,
 	std::size_t lower,
-	std::size_t upper)
+	std::size_t upper,
+	std::shared_ptr<std::size_t> reordered,
+	std::size_t* indices,
+	std::shared_ptr<std::size_t> destOutput)
 {
 	for (auto i = lower; i < upper; ++i) {
 		auto index = rgrouping.hash(column[i]);
@@ -76,7 +79,9 @@ void startAndEndJobs(Function fn,
 	Column& column,
 	Histogram& histogram,
 	RadixGrouping& rgrouping,
-	Args&&... args)
+	std::shared_ptr<std::size_t> reordered,
+	size_t* indices,
+	std::shared_ptr<std::size_t> output)
 {
 	std::size_t chunk_size = column.size() / rgrouping.number_of_tasks();
 	std::size_t diff_cases = column.size() % rgrouping.number_of_tasks();
@@ -89,7 +94,7 @@ void startAndEndJobs(Function fn,
 		std::size_t lower = chunk_size * i;
 		std::size_t upper = lower + chunk_size;
 
-        auto job = [&, i, lower, upper]() { fn(i, column, histogram, rgrouping, lower, upper, std::forward<Args>(args)...); };
+		auto job = [&, reordered, indices, output, i, lower, upper]() { fn(i, column, histogram, rgrouping, lower, upper, reordered, indices, output); };
 		results.emplace_back(pool.addJob(job));
 	}
 
@@ -97,8 +102,8 @@ void startAndEndJobs(Function fn,
 	std::size_t upper;
 	for (auto i = 0; i < diff_cases; ++i) {
 		upper = lower + chunk_size + 1;
-		auto job = [&, i, regular_cases, lower, upper]() {
-			fn(i + regular_cases, column, histogram, rgrouping, lower, upper, std::forward<Args>(args)...);
+		auto job = [&, reordered, indices, output, i, regular_cases, lower, upper]() {
+			fn(i + regular_cases, column, histogram, rgrouping, lower, upper, reordered, indices, output);
 		};
 		results.emplace_back(pool.addJob(job));
 
@@ -106,6 +111,17 @@ void startAndEndJobs(Function fn,
 	}
 
 	std::for_each(results.begin(), results.end(), [](ResultType& r) { r.wait(); });
+}
+
+template<class Function>
+static inline
+void startAndEndJobs(Function fn,
+	ThreadPool& pool,
+	Column& column,
+	Histogram& histogram,
+	RadixGrouping& rgrouping)
+{
+	startAndEndJobs(fn, pool, column, histogram, rgrouping, nullptr, nullptr, nullptr);
 }
 
 void localGrouping(std::shared_ptr<std::size_t> reordered,
@@ -177,6 +193,6 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	results.emplace_back(pool.addJob(job));
 
 	std::for_each(results.begin(), results.end(), [](ResultType& r) { r.wait(); });
-    
+
     return std::shared_ptr<size_t>(indices, std::default_delete<std::size_t[]>());
 }
