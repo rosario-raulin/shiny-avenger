@@ -14,7 +14,7 @@
 
 #define RANDOM_GENERATOR_TYPE std::mt19937_64
 
-static const size_t NUMBER_OF_PASSES = 50;
+static const size_t NUMBER_OF_PASSES = 1;
 static RANDOM_GENERATOR_TYPE RANDOM_GENERATOR;
 
 static size_t number_of_tuples(size_t size_in_mb) {
@@ -166,43 +166,41 @@ int main() {
 
   std::cout << "<results>" << std::endl;
 
-  for (size_t test_size : test_sizes) {
-    for (size_t cardinality : cardinalities) {
-      for (const std::string& name : dists) {
-        auto dist = make_dist<RANDOM_GENERATOR_TYPE>(name, 1, cardinality);
-        auto column = make_column(test_size, *dist);
+  for (size_t i = 0; i < NUMBER_OF_PASSES; ++i) {
+    for (size_t test_size : test_sizes) {
+      for (size_t cardinality : cardinalities) {
+        for (const std::string& name : dists) {
+          auto dist = make_dist<RANDOM_GENERATOR_TYPE>(name, 1, cardinality);
+          auto column = make_column(test_size, *dist);
 
-        for (auto& algo : algorithms) {
-          TestSample sample(column, algo);
+          for (auto& algo : algorithms) {
+            TestSample sample(column, algo);
 
-          std::cout << "\t<result>" << std::endl;
+            std::cout << "\t<result>" << std::endl;
 
-          std::cout << "\t\t<algorithm>";
-          std::cout << algo.name;
-          std::cout << "</algorithm>" << std::endl;
+            std::cout << "\t\t<algorithm>";
+            std::cout << algo.name;
+            std::cout << "</algorithm>" << std::endl;
 
-          std::cout << "\t\t<distribution>";
-          std::cout << dist->name();
-          std::cout << "</distribution>" << std::endl;
+            std::cout << "\t\t<distribution>";
+            std::cout << dist->name();
+            std::cout << "</distribution>" << std::endl;
 
-          std::cout << "\t\t<number-of-tuples>";
-          std::cout << number_of_tuples(test_size);
-          std::cout << "</number-of-tuples>" << std::endl;
+            std::cout << "\t\t<number-of-tuples>";
+            std::cout << number_of_tuples(test_size);
+            std::cout << "</number-of-tuples>" << std::endl;
 
-          std::cout << "\t\t<cardinality>";
-          std::cout << cardinality;
-          std::cout << "</cardinality>" << std::endl;
+            std::cout << "\t\t<cardinality>";
+            std::cout << cardinality;
+            std::cout << "</cardinality>" << std::endl;
 
-          std::cout << "\t\t<times>" << std::endl;
-          for (size_t i = 0; i < NUMBER_OF_PASSES; ++i) {
-            std::cout << "\t\t\t<time>";
+            std::cout << "\t\t<time>";
             sample();
             std::cout << sample.runtime().count();
             std::cout << "</time>" << std::endl;
-          }
-          std::cout << "\t\t</times>" << std::endl;
 
-          std::cout << "\t</result>" << std::endl;
+            std::cout << "\t</result>" << std::endl;
+          }
         }
       }
     }
