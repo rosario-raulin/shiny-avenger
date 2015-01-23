@@ -11,27 +11,30 @@
 #include <string>
 #include <stdexcept>
 
+#define RANDOM_GENERATOR_TYPE std::mt19937_64
+
 static const size_t NUMBER_OF_PASSES = 20;
 
-static std::mt19937 RANDOM_GENERATOR;
+static RANDOM_GENERATOR_TYPE RANDOM_GENERATOR;
 
 static size_t number_of_tuples(size_t size_in_mb) {
   return (size_in_mb * 1024 * 1024) / sizeof(size_t);
 }
 
+template<class Random>
 struct distribution {
-  virtual ~distribution() {}
   virtual std::string name() const = 0;
-  virtual size_t operator()(std::mt19937& gen) = 0;
+  virtual size_t operator()(Random& rand) = 0;
 };
 
-struct uniform_dist : public distribution {
+template<class Random>
+struct uniform_dist : public distribution<Random> {
   uniform_dist(size_t lower, size_t upper) :
     _name(std::string("uniform")),
     _dist(std::uniform_int_distribution<>(lower, upper))
   {}
 
-  virtual size_t operator()(std::mt19937& gen) {
+  virtual size_t operator()(Random& gen) {
     return _dist(gen);
   }
 
@@ -44,7 +47,8 @@ private:
   std::uniform_int_distribution<> _dist;
 };
 
-struct geo_dist : public distribution {
+template<class Random>
+struct geo_dist : public distribution<Random> {
   geo_dist(size_t lower, size_t upper)
     : _name(std::string("geo")),
       _dist(std::geometric_distribution<size_t>(0.3)),
@@ -52,7 +56,7 @@ struct geo_dist : public distribution {
       _upper(upper)
   {}
 
-  virtual size_t operator()(std::mt19937& gen) {
+  virtual size_t operator()(Random& gen) {
     size_t x;
     do {
       x = _dist(gen);
@@ -86,8 +90,9 @@ struct algorithm {
   IGroupingAlgorithm* algo;
 };
 
+template<class Random>
 static Column
-make_column(size_t size_in_mb, distribution& dist) {
+make_column(size_t size_in_mb, distribution<Random>& dist) {
   size_t tuples = number_of_tuples(size_in_mb);
 
   Column column;
@@ -127,12 +132,13 @@ private:
   std::chrono::milliseconds _runtime;
 };
 
-std::unique_ptr<distribution>
+template<class Random>
+std::unique_ptr<distribution<Random> >
 make_dist(const std::string& name, size_t lower, size_t upper) {
   if (name == "uniform") {
-    return std::unique_ptr<distribution>(new uniform_dist(lower, upper));
+    return std::unique_ptr<distribution<Random> >(new uniform_dist<Random>(lower, upper));
   } else if (name == "geometric") {
-    return std::unique_ptr<distribution>(new geo_dist(lower, upper));
+    return std::unique_ptr<distribution<Random> >(new geo_dist<Random>(lower, upper));
   } else {
     throw std::runtime_error("unknown distribution");
   }
@@ -155,7 +161,7 @@ int main() {
   for (size_t test_size : test_sizes) {
     for (size_t cardinality : cardinalities) {
       for (const std::string& name : dists) {
-        std::unique_ptr<distribution> dist = make_dist(name, 1, cardinality);
+        auto dist = make_dist<RANDOM_GENERATOR_TYPE>(name, 1, cardinality);
         auto column = make_column(test_size, *dist);
 
         for (auto& algo : algorithms) {
