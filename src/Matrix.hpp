@@ -9,7 +9,7 @@ public:
 	Matrix(std::size_t rows, std::size_t columns) :
 		_rows(rows),
 		_columns(columns),
-		_values(new T[rows * columns]){
+		_values(new T[rows * columns]()){
 	}
 	
 	T& get(std::size_t row, std::size_t column) const {
