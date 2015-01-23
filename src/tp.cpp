@@ -14,7 +14,7 @@
 
 #define RANDOM_GENERATOR_TYPE std::mt19937_64
 
-static const size_t NUMBER_OF_PASSES = 20;
+static const size_t NUMBER_OF_PASSES = 50;
 static RANDOM_GENERATOR_TYPE RANDOM_GENERATOR;
 
 static size_t number_of_tuples(size_t size_in_mb) {

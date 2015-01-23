@@ -25,14 +25,14 @@ indexJob(std::size_t id,
 
 	std::unique_ptr<std::size_t[]> dest(new std::size_t[table_size]());
 
-	for (auto i = 0; i < id; ++i) {
-		for (auto j = 0; j < table_size; ++j) {
+	for (size_t i = 0; i < id; ++i) {
+		for (size_t j = 0; j < table_size; ++j) {
 			dest[j] += histogram.get(i, j);
 		}
 	}
 
-	for (auto i = id; i < rgrouping.number_of_tasks(); ++i) {
-		for (auto j = 1; j < table_size; ++j) {
+	for (size_t i = id; i < rgrouping.number_of_tasks(); ++i) {
+		for (size_t j = 1; j < table_size; ++j) {
 			dest[j] += histogram.get(i, j-1);
 		}
 	}
@@ -41,8 +41,8 @@ indexJob(std::size_t id,
 		std::copy(dest.get(), dest.get() + table_size, destOutput.get());
 	}
 
-	for (auto i = lower; i < upper; ++i) {
-		auto index = rgrouping.hash(column[i]);
+	for (size_t i = lower; i < upper; ++i) {
+		size_t index = rgrouping.hash(column[i]);
 		indices[dest[index]] = i;
 		(reordered.get())[dest[index]] = column[i];
 		++dest[index];
@@ -100,7 +100,7 @@ void startAndEndJobs(Function fn,
 
 	std::size_t lower = chunk_size * regular_cases;
 	std::size_t upper;
-	for (auto i = 0; i < diff_cases; ++i) {
+	for (size_t i = 0; i < diff_cases; ++i) {
 		upper = lower + chunk_size + 1;
 		auto job = [&, reordered, indices, output, i, regular_cases, lower, upper]() {
 			fn(i + regular_cases, column, histogram, rgrouping, lower, upper, reordered, indices, output);
@@ -133,11 +133,11 @@ void localGrouping(std::shared_ptr<std::size_t> reordered,
 	std::size_t* values = reordered.get();
     std::size_t* indexMap = indices;
 
-	for (auto i = lower; i < upper; ++i) {
+	for (size_t i = lower; i < upper; ++i) {
 		groups[values[i]].emplace_back(indexMap[i]);
 	}
 
-	auto i = lower;
+	size_t i = lower;
 	for (const auto& pair : groups) {
 		for (const auto& index : pair.second) {
 			indexMap[i++] = index;
@@ -179,7 +179,7 @@ RadixGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	std::vector<ResultType> results;
 	std::size_t* offsets = destOutput.get();
 
-	for (auto i = 0; i < table_size-1; ++i) {
+	for (size_t i = 0; i < table_size-1; ++i) {
 		auto lower = offsets[i];
 		auto upper = offsets[i+1];
 

@@ -96,7 +96,7 @@ SharedHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	using ResultType = std::shared_future<std::shared_ptr<HashTable> >;
 	std::vector<ResultType> results;
 
-	for (auto i = 0; i < regular_cases; ++i) {
+	for (size_t i = 0; i < regular_cases; ++i) {
 		std::size_t lower = chunk_size * i;
 		std::size_t upper = lower + chunk_size;
 
@@ -107,7 +107,7 @@ SharedHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 
 	std::size_t lower = chunk_size * regular_cases;
 	std::size_t upper;
-	for (auto i = 0; i < diff_cases; ++i) {
+	for (size_t i = 0; i < diff_cases; ++i) {
 		upper = lower + chunk_size + 1;
 
 		// do buildHashTable
