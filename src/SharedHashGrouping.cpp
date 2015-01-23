@@ -7,6 +7,7 @@
 #include <cmath>  // ceil
 #include <memory>
 
+#define NUMBER_OF_THREADS 4
 #define NUMBER_OF_RELEVANT_BITS 4
 
 struct mysort {
@@ -44,7 +45,7 @@ size_t HashTable::hash(size_t n) const {
 
 void HashTable::merge(std::shared_ptr<HashTable> table, Column& column) {
 	size_t n = 1 << NUMBER_OF_RELEVANT_BITS;
-	
+
 	for (std::size_t i = 0; i < n; ++i) {
 		buckets[i].splice(buckets[i].end(), table->buckets[i]);
 	}
@@ -77,12 +78,12 @@ SharedHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	if (columns.empty()) {
 		return PositionListPtr();
 	}
-		
+
 	// TODO: extend to multiple columns
 	ColumnPtr columnPtr = columns[0];
 	Column& column = *columnPtr;
 	size_t column_size = column.size();
-	
+
 	ThreadPool pool(NUMBER_OF_THREADS);
 
 	// Alpha is  the factor of spltting. Alpha=1 => One Task for Every Thread
@@ -91,19 +92,19 @@ SharedHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 	size_t chunk_size = column_size / number_of_tasks;
 	size_t diff_cases = column_size % number_of_tasks;
 	size_t regular_cases = number_of_tasks - diff_cases;
-	
+
 	using ResultType = std::shared_future<std::shared_ptr<HashTable> >;
 	std::vector<ResultType> results;
-	
+
 	for (auto i = 0; i < regular_cases; ++i) {
 		std::size_t lower = chunk_size * i;
 		std::size_t upper = lower + chunk_size;
-		
+
 		// do buildHashTable
 		auto job = [&, lower, upper]() { return buildHashTable(lower, upper, column); };
 		results.emplace_back(pool.addJob(job));
 	}
-	
+
 	std::size_t lower = chunk_size * regular_cases;
 	std::size_t upper;
 	for (auto i = 0; i < diff_cases; ++i) {
@@ -113,7 +114,7 @@ SharedHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 		auto job = [&, lower, upper]() { return buildHashTable(lower, upper, column); };
 
 		results.emplace_back(pool.addJob(job));
-		
+
 		lower = upper;
 	}
 
@@ -126,14 +127,14 @@ SharedHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 		auto p = results[i].get();
 		merged_table->merge(p, column);
 	}
-	
+
 	std::vector<std::shared_future<void> > sortingResults;
 	for (std::size_t i = 0; i < (1 << NUMBER_OF_RELEVANT_BITS); ++i) {
 		auto& bucket = merged_table->buckets[i];
 		auto sortJob = [&bucket, &column](){ bucket.sort(mysort(column)); };
 		sortingResults.emplace_back(pool.addJob(sortJob));
 	}
-	
+
 	//merged_table->sort(column);
 	std::for_each(sortingResults.begin(), sortingResults.end(), [](std::shared_future<void>& res) { res.wait(); });
 
@@ -148,6 +149,6 @@ SharedHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
 			indexPtr[j++] = index;
 		}
 	}
-	
+
 	return indices;
 }
