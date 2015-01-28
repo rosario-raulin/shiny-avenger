@@ -23,7 +23,7 @@ public:
     Hash hash = std::hash<Key>(),
     Eq eq = std::equal_to<Key>()) :
     _size(0),
-    _kvp(new KVPList[bucket_number]),
+    _kvp(new KVPList[bucket_number]()),
     _bucket_number(bucket_number),
     _hash(hash),
     _eq(eq)
@@ -53,6 +53,10 @@ public:
     _eq(std::move(other._eq))
   {
   }
+
+    ~MergeableTable() {
+       delete[] _kvp;
+    }
 
   Value& operator[](const Key& key) {
     auto hash = _hash(key) % _bucket_number;
@@ -106,7 +110,8 @@ public:
   using bucket_iterator = typename KVPList::const_iterator;
 
   bucket_iterator bucket_begin(size_t i) const {
-    return _kvp[i].cbegin();
+      KVPList& bucket = _kvp[i];
+    return bucket.cbegin();
   }
 
   bucket_iterator bucket_end(size_t i) const {
@@ -115,7 +120,7 @@ public:
 
 private:
   size_t _size;
-  std::unique_ptr<KVPList[]> _kvp;
+  KVPList* _kvp;
 
   const size_t _bucket_number;
   const Hash _hash;
