@@ -7,20 +7,13 @@
 #include <list>
 #include <memory>
 
-#include <iostream>
-
-static const size_t NUMBER_OF_THREADS = 4;
-static const size_t NUMBER_OF_TASKS = 8;
-static const size_t NUMBER_OF_RELEVANT_BITS = 7;
-static const size_t TABLE_SIZE = (1 << NUMBER_OF_RELEVANT_BITS);
-
 using HT = MergeableTable<size_t, std::list<size_t> >;
 using HTPtr = std::shared_ptr<HT>;
 using PartListPtr = std::unique_ptr<std::list<size_t> >;
 
 static HTPtr
-localHashing(Column& column, size_t lower, size_t upper) {
-  HTPtr tablePtr(new HT(TABLE_SIZE));
+localHashing(Column& column, size_t lower, size_t upper, size_t table_size) {
+  HTPtr tablePtr(new HT(table_size));
   auto& table = *tablePtr;
 
   for (size_t i = lower; i < upper; ++i) {
@@ -47,30 +40,39 @@ bucketHash(size_t i, std::vector<HTPtr>& tables, std::list<size_t>& tids) {
   }
 }
 
+IndependentHashGrouping::IndependentHashGrouping(
+  size_t number_of_threads,
+  size_t number_of_tasks,
+  size_t number_of_bits_for_hashing) :
+  _number_of_threads(number_of_threads),
+  _number_of_tasks(number_of_tasks),
+  _number_of_bits_for_hashing(number_of_bits_for_hashing)
+{
+}
+
 PositionListPtr
 IndependentHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
-  ThreadPool pool(NUMBER_OF_THREADS);
+  ThreadPool pool(_number_of_threads);
 
   auto column = *(columns[0]);
 
-
-  size_t chunk_size = column.size() / NUMBER_OF_TASKS;
-  size_t diff_cases = column.size() % NUMBER_OF_TASKS;
-  size_t regular_cases = NUMBER_OF_TASKS - diff_cases;
+  size_t chunk_size = column.size() / _number_of_tasks;
+  size_t diff_cases = column.size() % _number_of_tasks;
+  size_t regular_cases = _number_of_tasks - diff_cases;
 
   // Step 1: Build local hash tables
   std::vector<HTPtr> tables;
 
-  {
     using ResultType = std::shared_future<HTPtr>;
     std::vector<ResultType> results;
+    size_t table_size = _table_size();
 
     for (size_t i = 0; i < regular_cases; ++i) {
       size_t lower = chunk_size * i;
       size_t upper = lower + chunk_size;
 
-      auto job = [&column, lower, upper]() {
-        return localHashing(column, lower, upper);
+      auto job = [&column, lower, upper, table_size]() {
+        return localHashing(column, lower, upper, table_size);
       };
       results.emplace_back(pool.addJob(job));
     }
@@ -80,8 +82,8 @@ IndependentHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
     for (size_t i = 0; i < diff_cases; ++i) {
       upper = lower + chunk_size + 1;
 
-      auto job = [&column, lower, upper]() {
-        return localHashing(column, lower, upper);
+      auto job = [&column, lower, upper, table_size]() {
+        return localHashing(column, lower, upper, table_size);
       };
       results.emplace_back(pool.addJob(job));
 
@@ -89,25 +91,28 @@ IndependentHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
     }
 
 
-    tables.reserve(NUMBER_OF_TASKS);
-    for (size_t i = 0; i < NUMBER_OF_TASKS; ++i) {
+    tables.reserve(_number_of_tasks);
+    for (size_t i = 0; i < _number_of_tasks; ++i) {
       tables.emplace_back(results[i].get());
     }
-  }
 
   // Step 2: Hash over each bucket
   std::vector<std::list<size_t> > partLists;
-  partLists.resize(TABLE_SIZE);
+  partLists.resize(_table_size());
 
   std::vector<std::shared_future<void> > bucketGroupJobs;
-  bucketGroupJobs.resize(TABLE_SIZE);
+  bucketGroupJobs.resize(_table_size());
 
-  for (size_t i = 0; i < TABLE_SIZE; ++i) {
+  for (size_t i = 0; i < _table_size(); ++i) {
     auto job = [i, &tables, &partLists]() {
       bucketHash(i, tables, partLists[i]);
     };
     bucketGroupJobs[i] = pool.addJob(job);
   }
+    
+    for (auto& job : bucketGroupJobs) {
+        job.wait();
+    }
 
   std::default_delete<size_t[]> deleter;
   std::shared_ptr<size_t> posList(new size_t[column.size()], deleter);
@@ -118,7 +123,7 @@ IndependentHashGrouping::groupBy(const std::vector<ColumnPtr>& columns) {
     }
   }
 
-  std::cout << "calculation done." << std::endl;
+  // std::cout << "calculation done." << std::endl;
 
   return posList;
 }
